@@ -5,8 +5,21 @@ import { fileURLToPath } from "url";
 import axios from "axios";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
+
+let aiInstance: GoogleGenAI | null = null;
+function getAi() {
+  if (!aiInstance) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error("Chave GEMINI_API_KEY não está definida no ambiente do servidor (.env). Adicione o token correspondente.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey: key });
+  }
+  return aiInstance;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -274,6 +287,151 @@ async function startServer() {
       }
       console.error("Spotify Play Error:", playError.response?.data || playError.message);
       res.status(500).json({ error: "Failed to play on Spotify" });
+    }
+  });
+
+  // 7. import Song From URL via Gemini API
+  app.post("/api/ai/import-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ error: "URL is required" });
+      }
+      const ai = getAi();
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: `Extract the song details from this URL: ${url}. 
+        
+        CRITICAL FORMATTING RULES:
+        1. The 'content' field MUST use INLINE CHORDS in brackets like [G#].
+        2. NEVER put chords on a separate line above the lyrics.
+        3. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
+        4. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus, Bridge) WITHOUT brackets around the header name itself, unless it's a chord.
+        5. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
+        6. Ensure the output is a clean string ready for display.
+        7. Clean the 'title' and 'artist' fields: remove suffixes like "(Official Video)", "(Lyrics)", "(Live)", etc.
+        
+        Example:
+        [G#] Midnight [Fm] calls [C#] the echo [Eb] falls
+        
+        I need: title, artist, key, bpm, timeSignature, content, genre, and tags.`,
+        config: {
+          tools: [{ urlContext: {} }],
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              artist: { type: Type.STRING },
+              key: { type: Type.STRING },
+              bpm: { type: Type.NUMBER },
+              timeSignature: { type: Type.STRING },
+              content: { type: Type.STRING },
+              genre: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["title", "artist", "content"]
+          }
+        }
+      });
+      
+      res.json(JSON.parse(response.text));
+    } catch (error: any) {
+      console.error("Import from URL Error:", error.message);
+      res.status(500).json({ error: error.message || "Failed to import song from URL via Gemini" });
+    }
+  });
+
+  // 8. import Song From PDF via Gemini API
+  app.post("/api/ai/import-pdf", async (req, res) => {
+    try {
+      const { pdfBase64 } = req.body;
+      if (!pdfBase64) {
+        return res.status(400).json({ error: "Base64 PDF content is required" });
+      }
+      const ai = getAi();
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: [
+          {
+            inlineData: {
+              data: pdfBase64,
+              mimeType: "application/pdf"
+            }
+          },
+          `Extract the song sheet details from this PDF.
+          
+          CRITICAL FORMATTING RULES:
+          1. Extract all lyrics and chords from the pdf.
+          2. The 'content' field MUST use INLINE CHORDS in brackets like [G#].
+          3. NEVER put chords on a separate line above the lyrics.
+          4. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
+          5. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus, Bridge) WITHOUT brackets around the header name itself, unless it's a chord.
+          6. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
+          7. Ensure the output is a clean string ready for display.
+          8. Clean the 'title' and 'artist' fields: remove suffixes like "(Official Video)", "(Lyrics)", "(Live)", etc.
+          
+          Example:
+          [G#] Midnight [Fm] calls [C#] the echo [Eb] falls
+          
+          I need: title, artist, key, bpm, timeSignature, content, genre, and tags.
+          If some fields like bpm, key, timeSignature are missing or can't be guessed, predict appropriate defaults.`
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              artist: { type: Type.STRING },
+              key: { type: Type.STRING },
+              bpm: { type: Type.NUMBER },
+              timeSignature: { type: Type.STRING },
+              content: { type: Type.STRING },
+              genre: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["title", "artist", "content"]
+          }
+        }
+      });
+      
+      res.json(JSON.parse(response.text));
+    } catch (error: any) {
+      console.error("Import from PDF Error:", error.message);
+      res.status(500).json({ error: error.message || "Failed to import song from PDF via Gemini" });
+    }
+  });
+
+  // 9. Reformat/Clean Chords via Gemini API
+  app.post("/api/ai/clean", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      const ai = getAi();
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: `Re-format this song content to use INLINE CHORDS in brackets like [G#].
+        
+        CRITICAL RULES:
+        1. NEVER put chords on a separate line above the lyrics.
+        2. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
+        3. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus).
+        4. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
+        5. Remove any extra text or formatting junk.
+        
+        Original Content:
+        ${content}`,
+      });
+      
+      let cleaned = response.text.trim();
+      cleaned = cleaned.replace(/^```[a-z]*\n/i, '').replace(/\n```$/i, '');
+      res.json({ content: cleaned });
+    } catch (error: any) {
+      console.error("Clean Content Error:", error.message);
+      res.status(500).json({ error: error.message || "Failed to format content via Gemini" });
     }
   });
 

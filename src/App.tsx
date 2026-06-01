@@ -41,104 +41,33 @@ import { cn } from './lib/utils';
 import { Toaster, toast } from 'sonner';
 import { Song, Setlist, PerformanceSettings, Language, UserProfile } from './types';
 import { useTranslation } from './hooks/useTranslation';
-import { GoogleGenAI, Type } from "@google/genai";
 import { storage } from './lib/storage';
 
-// --- Gemini API Setup ---
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-if (!GEMINI_API_KEY) {
-  console.warn('GEMINI_API_KEY is not defined. AI features will not work.');
-}
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
+// --- Gemini API Proxy Setup ---
 const importSongFromUrl = async (url: string) => {
-  const response = await ai.models.generateContent({
-    model: "gemini-flash-latest",
-    contents: `Extract the song details from this URL: ${url}. 
-    
-    CRITICAL FORMATTING RULES:
-    1. The 'content' field MUST use INLINE CHORDS in brackets like [G#].
-    2. NEVER put chords on a separate line above the lyrics.
-    3. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
-    4. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus, Bridge) WITHOUT brackets around the header name itself, unless it's a chord.
-    5. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
-    6. Ensure the output is a clean string ready for display.
-    7. Clean the 'title' and 'artist' fields: remove suffixes like "(Official Video)", "(Lyrics)", "(Live)", etc.
-    
-    Example:
-    [G#] Midnight [Fm] calls [C#] the echo [Eb] falls
-    
-    I need: title, artist, key, bpm, timeSignature, content, genre, and tags.`,
-    config: {
-      tools: [{ urlContext: {} }],
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          title: { type: Type.STRING },
-          artist: { type: Type.STRING },
-          key: { type: Type.STRING },
-          bpm: { type: Type.NUMBER },
-          timeSignature: { type: Type.STRING },
-          content: { type: Type.STRING },
-          genre: { type: Type.STRING },
-          tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-        },
-        required: ["title", "artist", "content"]
-      }
-    }
+  const response = await fetch('/api/ai/import-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
   });
-  
-  return JSON.parse(response.text);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to import song from URL');
+  }
+  return await response.json();
 };
 
 const importSongFromPdf = async (base64Pdf: string) => {
-  const response = await ai.models.generateContent({
-    model: "gemini-flash-latest",
-    contents: [
-      {
-        inlineData: {
-          mimeType: "application/pdf",
-          data: base64Pdf
-        }
-      },
-      {
-        text: `Extract the song details from this PDF sheet music.
-        
-        CRITICAL FORMATTING RULES:
-        1. The 'content' field MUST use INLINE CHORDS in brackets like [G#].
-        2. NEVER put chords on a separate line above the lyrics.
-        3. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
-        4. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus, Bridge) WITHOUT brackets around the header name itself, unless it's a chord.
-        5. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
-        6. Ensure the output is a clean string ready for display.
-        
-        Example:
-        [G#] Midnight [Fm] calls [C#] the echo [Eb] falls
-        
-        I need: title, artist, key, bpm, timeSignature, content, genre, and tags.`
-      }
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          title: { type: Type.STRING },
-          artist: { type: Type.STRING },
-          key: { type: Type.STRING },
-          bpm: { type: Type.NUMBER },
-          timeSignature: { type: Type.STRING },
-          content: { type: Type.STRING },
-          genre: { type: Type.STRING },
-          tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-        },
-        required: ["title", "artist", "content"]
-      }
-    }
+  const response = await fetch('/api/ai/import-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdfBase64: base64Pdf })
   });
-  
-  return JSON.parse(response.text);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to import song from PDF');
+  }
+  return await response.json();
 };
 
 const isSectionHeader = (line: string): boolean => {
@@ -775,29 +704,20 @@ const SongEditorView = ({ onSave, initialSong, onCancel, language }: { onSave: (
     if (!song.content) return;
     setIsCleaning(true);
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
-        contents: `Re-format this song content to use INLINE CHORDS in brackets like [G#].
-        
-        CRITICAL RULES:
-        1. NEVER put chords on a separate line above the lyrics.
-        2. Place the chord bracket [C] exactly before the syllable where the chord change occurs.
-        3. Use section headers on their own lines (e.g., Intro, Verse 1, Chorus).
-        4. If a line has only chords, format it like: [G#] [Fm] [C#] [Eb].
-        5. Remove any extra text or formatting junk.
-        
-        Original Content:
-        ${song.content}`,
+      const response = await fetch('/api/ai/clean', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: song.content })
       });
-      
-      let cleaned = response.text.trim();
-      // Remove markdown code blocks if present
-      cleaned = cleaned.replace(/^```[a-z]*\n/i, '').replace(/\n```$/i, '');
-      
-      setSong({ ...song, content: cleaned });
-    } catch (err) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to format content');
+      }
+      const data = await response.json();
+      setSong({ ...song, content: data.content });
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to clean content. Please try again.');
+      alert(err.message || 'Failed to clean content. Please try again.');
     } finally {
       setIsCleaning(false);
     }
