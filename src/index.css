@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-label: "Space Grotesk", ui-monospace, SFMono-Regular, monospace;
+
+  /* Default (Light) */
+  --color-primary: #006a60;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #74f8e5;
+  --color-on-primary-container: #00201c;
+
+  --color-secondary: #904b3d;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #ffdad2;
+  --color-on-secondary-container: #3a0903;
+
+  --color-background: #f4fbf9;
+  --color-on-background: #000000;
+
+  --color-surface: #f4fbf9;
+  --color-on-surface: #000000;
+  --color-surface-variant: #dae5e1;
+  --color-on-surface-variant: #3f4947;
+
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5f3;
+  --color-surface-container: #ebefed;
+  --color-surface-container-high: #e5e9e7;
+  --color-surface-container-highest: #e0e4e2;
+
+  --color-outline: #6f7977;
+  --color-outline-variant: #bec9c6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #44e2ce;
+    --color-on-primary: #003731;
+    --color-primary-container: #005048;
+    --color-on-primary-container: #74f8e5;
+
+    --color-secondary: #ffb4a4;
+    --color-on-secondary: #5e1708;
+    --color-secondary-container: #773327;
+    --color-on-secondary-container: #ffdad2;
+
+    --color-background: #0e1514;
+    --color-on-background: #dde4e2;
+
+    --color-surface: #0e1514;
+    --color-on-surface: #dde4e2;
+    --color-surface-variant: #3f4947;
+    --color-on-surface-variant: #bec9c6;
+
+    --color-surface-container-lowest: #090f0f;
+    --color-surface-container-low: #161d1c;
+    --color-surface-container: #1b2120;
+    --color-surface-container-high: #252b2a;
+    --color-surface-container-highest: #303635;
+
+    --color-outline: #899391;
+    --color-outline-variant: #3f4947;
+  }
+}
+
+.dark {
+  --color-primary: #44e2ce;
+  --color-on-primary: #003731;
+  --color-primary-container: #005048;
+  --color-on-primary-container: #74f8e5;
+
+  --color-secondary: #ffb4a4;
+  --color-on-secondary: #5e1708;
+  --color-secondary-container: #773327;
+  --color-on-secondary-container: #ffdad2;
+
+  --color-background: #0e1514;
+  --color-on-background: #dde4e2;
+
+  --color-surface: #0e1514;
+  --color-on-surface: #dde4e2;
+  --color-surface-variant: #3f4947;
+  --color-on-surface-variant: #bec9c6;
+
+  --color-surface-container-lowest: #090f0f;
+  --color-surface-container-low: #161d1c;
+  --color-surface-container: #1b2120;
+  --color-surface-container-high: #252b2a;
+  --color-surface-container-highest: #303635;
+
+  --color-outline: #899391;
+  --color-outline-variant: #3f4947;
+}
+
+.light {
+  --color-primary: #006a60;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #74f8e5;
+  --color-on-primary-container: #00201c;
+
+  --color-secondary: #904b3d;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #ffdad2;
+  --color-on-secondary-container: #3a0903;
+
+  --color-background: #f4fbf9;
+  --color-on-background: #000000;
+
+  --color-surface: #f4fbf9;
+  --color-on-surface: #000000;
+  --color-surface-variant: #dae5e1;
+  --color-on-surface-variant: #3f4947;
+
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5f3;
+  --color-surface-container: #ebefed;
+  --color-surface-container-high: #e5e9e7;
+  --color-surface-container-highest: #e0e4e2;
+
+  --color-outline: #6f7977;
+  --color-outline-variant: #bec9c6;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-background font-body antialiased transition-colors duration-300;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
