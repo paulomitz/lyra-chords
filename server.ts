@@ -299,7 +299,7 @@ async function startServer() {
       }
       const ai = getAi();
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: `Extract the song details from this URL: ${url}. 
         
         CRITICAL FORMATTING RULES:
@@ -351,7 +351,7 @@ async function startServer() {
       }
       const ai = getAi();
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: [
           {
             inlineData: {
@@ -412,7 +412,7 @@ async function startServer() {
       }
       const ai = getAi();
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3.5-flash",
         contents: `Re-format this song content to use INLINE CHORDS in brackets like [G#].
         
         CRITICAL RULES:
