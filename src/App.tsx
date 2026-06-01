@@ -747,13 +747,10 @@ const LibraryView = ({ songs, onDelete, onEdit, onToggleFavorite, onToggleSideba
   );
 };
 
-const SongEditorView = ({ onSave, initialSong, onCancel, language, isSpotifyConnected }: { onSave: (song: Song | Omit<Song, 'id'>) => void, initialSong: Song | null, onCancel: () => void, language: Language, isSpotifyConnected: boolean }) => {
+const SongEditorView = ({ onSave, initialSong, onCancel, language }: { onSave: (song: Song | Omit<Song, 'id'>) => void, initialSong: Song | null, onCancel: () => void, language: Language }) => {
   const navigate = useNavigate();
   const t = useTranslation(language);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [isSearchingStreaming, setIsSearchingStreaming] = useState(false);
-  const [streamingResults, setStreamingResults] = useState<any[]>([]);
-  const [showStreamingSearch, setShowStreamingSearch] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'sheet'>('content');
   const [song, setSong] = useState<Omit<Song, 'id'> | Song>(initialSong || {
     title: '',
@@ -804,39 +801,6 @@ const SongEditorView = ({ onSave, initialSong, onCancel, language, isSpotifyConn
     } finally {
       setIsCleaning(false);
     }
-  };
-
-  const handleStreamingSearch = async (provider: 'spotify') => {
-    if (!song.title && !song.artist) return;
-    setIsSearchingStreaming(true);
-    setShowStreamingSearch(true);
-    try {
-      const query = `${song.title} ${song.artist}`.trim();
-      const endpoint = `/api/spotify/search?q=${encodeURIComponent(query)}`;
-      const response = await fetch(endpoint);
-      const data = await response.json();
-      if (data.error) {
-        alert(data.error);
-      } else {
-        setStreamingResults(data);
-      }
-    } catch (error) {
-      console.error(`${provider} search failed:`, error);
-    } finally {
-      setIsSearchingStreaming(false);
-    }
-  };
-
-  const selectStreamingTrack = (track: any) => {
-    const updates: any = {
-      title: track.title,
-      artist: track.artist,
-      coverUrl: track.coverUrl || song.coverUrl,
-      spotifyUri: track.uri
-    };
-
-    setSong({ ...song, ...updates });
-    setShowStreamingSearch(false);
   };
 
   return (
@@ -890,51 +854,13 @@ const SongEditorView = ({ onSave, initialSong, onCancel, language, isSpotifyConn
                 <label className="block font-label text-[9px] md:text-[10px] uppercase tracking-widest text-on-surface-variant mb-1 ml-1">{t.song_title}</label>
                 <div className="relative">
                   <input 
-                    className="w-full bg-surface-container-highest border-none focus:ring-1 focus:ring-primary rounded-lg p-2.5 md:p-3 text-on-surface font-headline font-bold text-base md:text-lg placeholder:text-on-surface-variant/30 transition-all pr-12" 
+                    className="w-full bg-surface-container-highest border-none focus:ring-1 focus:ring-primary rounded-lg p-2.5 md:p-3 text-on-surface font-headline font-bold text-base md:text-lg placeholder:text-on-surface-variant/30 transition-all" 
                     placeholder={t.enter_song_title} 
                     type="text"
                     value={song.title}
                     onChange={(e) => setSong({ ...song, title: e.target.value })}
                   />
-                  {isSpotifyConnected && (
-                    <button 
-                      onClick={() => handleStreamingSearch('spotify')}
-                      className={cn(
-                        "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all",
-                        song.spotifyUri ? "text-green-500 bg-green-500/10" : "text-on-surface-variant/50 hover:bg-green-500/10 hover:text-green-500"
-                      )}
-                      title={song.spotifyUri ? t.linked_to_spotify : t.sync_with_spotify}
-                    >
-                      <Icon name={song.spotifyUri ? "check_circle" : "sync"} className={cn("text-lg", isSearchingStreaming && "animate-spin")} />
-                    </button>
-                  )}
                 </div>
-                
-                {showStreamingSearch && streamingResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-high rounded-xl shadow-2xl border border-outline-variant/20 z-50 overflow-hidden">
-                    <div className="p-2 border-b border-outline-variant/10 flex items-center justify-between bg-surface-container-highest">
-                      <span className="font-label text-[9px] uppercase tracking-widest font-bold text-on-surface-variant ml-2">{t.streaming_results} (Spotify)</span>
-                      <button onClick={() => setShowStreamingSearch(false)} className="p-1 hover:bg-surface-container-highest rounded-md">
-                        <Icon name="close" className="text-sm" />
-                      </button>
-                    </div>
-                    <div className="max-h-60 overflow-y-auto">
-                      {streamingResults.map((track) => (
-                        <button
-                          key={track.id}
-                          onClick={() => selectStreamingTrack(track)}
-                          className="w-full p-3 flex items-center gap-3 hover:bg-primary/10 transition-colors text-left border-b border-outline-variant/5 last:border-0"
-                        >
-                          <img src={track.coverUrl} alt="" className="w-10 h-10 rounded-md shadow-sm" referrerPolicy="no-referrer" />
-                          <div className="min-w-0">
-                            <p className="font-bold text-sm truncate text-on-surface">{track.title}</p>
-                            <p className="text-xs text-on-surface-variant truncate">{track.artist}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
               <div className="group">
                 <label className="block font-label text-[9px] md:text-[10px] uppercase tracking-widest text-on-surface-variant mb-1 ml-1">{t.artist_composer}</label>
@@ -1866,36 +1792,6 @@ const PerformView = ({ songs, setlists, settings, onUpdateSettings, onUpdateSong
             </div>
             <div className="flex items-center gap-1 md:gap-2">
             <div className="flex items-center gap-1.5 md:gap-2 mr-2">
-              {song.spotifyUri && (
-                <button 
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/spotify/play', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: song.title, artist: song.artist, uri: song.spotifyUri })
-                      });
-                      const data = await response.json();
-                      if (data.external_url) {
-                        if (data.message) toast.info(data.message);
-                        window.open(data.external_url, '_blank');
-                      } else if (data.error) {
-                        toast.error(data.error);
-                      } else {
-                        toast.success(language === 'pt-BR' || language === 'pt-PT' ? "Reproduzindo no Spotify!" : "Playing on Spotify!");
-                      }
-                    } catch (error) {
-                      console.error('Failed to play on Spotify:', error);
-                      toast.error('Failed to play on Spotify. Make sure you are connected.');
-                    }
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 active:scale-95 transition-all text-[8px] md:text-[10px] font-bold uppercase tracking-widest border border-green-500/10"
-                  title="Play on Spotify"
-                >
-                  <Icon name="play_arrow" className="text-xs md:text-sm" />
-                  <span>Spotify</span>
-                </button>
-              )}
               {song.youtubeUrl && (
                 <button 
                   onClick={() => {
@@ -2778,37 +2674,15 @@ const SettingsView = ({
     },
     { 
       id: 'streaming', 
-      title: t.streaming_accounts, 
-      subtitle: t.streaming_accounts_desc,
-      icon: 'music_note',
-      color: 'text-green-500'
+      title: language === 'pt-BR' || language === 'pt-PT' ? 'Integração com YouTube' : 'YouTube Integration', 
+      subtitle: language === 'pt-BR' || language === 'pt-PT' ? 'Ative ou desative o player e as guias de áudio/vídeo do YouTube' : 'Enable or disable YouTube audio/video guide player',
+      icon: 'smart_display',
+      color: 'text-red-500'
     }
   ];
 
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        const provider = event.data.provider;
-        const newAccounts = settings.streamingAccounts?.map(a => 
-          a.id === provider ? { ...a, connected: true } : a
-        );
-        onUpdateSettings({ ...settings, streamingAccounts: newAccounts });
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [settings, onUpdateSettings]);
-
   const handleConnect = async (providerId: string) => {
-    if (providerId === 'spotify') {
-      try {
-        const response = await fetch('/api/auth/spotify/url');
-        const { url } = await response.json();
-        window.open(url, 'spotify_oauth', 'width=600,height=700');
-      } catch (error) {
-        console.error('Failed to get Spotify auth URL:', error);
-      }
-    } else if (providerId === 'youtube') {
+    if (providerId === 'youtube') {
       const newAccounts = settings.streamingAccounts?.map(a => 
         a.id === 'youtube' ? { ...a, connected: true } : a
       );
@@ -2821,17 +2695,7 @@ const SettingsView = ({
   };
 
   const handleDisconnect = async (providerId: string) => {
-    if (providerId === 'spotify') {
-      try {
-        await fetch('/api/auth/spotify/logout', { method: 'POST' });
-        const newAccounts = settings.streamingAccounts?.map(a => 
-          a.id === providerId ? { ...a, connected: false } : a
-        );
-        onUpdateSettings({ ...settings, streamingAccounts: newAccounts });
-      } catch (error) {
-        console.error('Failed to logout from Spotify:', error);
-      }
-    } else if (providerId === 'youtube') {
+    if (providerId === 'youtube') {
       const newAccounts = settings.streamingAccounts?.map(a => 
         a.id === 'youtube' ? { ...a, connected: false } : a
       );
@@ -3277,6 +3141,7 @@ const SettingsView = ({
   }
 
   if (activeSection === 'streaming') {
+    const youtubeAccount = (settings.streamingAccounts || []).find(a => a.id === 'youtube') || { id: 'youtube', name: 'YouTube', connected: false };
     return (
       <motion.div 
         initial={{ opacity: 0, x: 20 }}
@@ -3292,55 +3157,55 @@ const SettingsView = ({
             <Icon name="arrow_back" />
           </button>
           <div>
-            <h2 className="font-headline text-2xl md:text-4xl font-black tracking-tighter text-on-surface">{t.streaming_accounts}</h2>
-            <p className="text-on-surface-variant text-xs md:text-sm">{t.streaming_accounts_desc}</p>
+            <h2 className="font-headline text-2xl md:text-4xl font-black tracking-tighter text-on-surface">
+              {language === 'pt-BR' || language === 'pt-PT' ? 'Integração com YouTube' : 'YouTube Integration'}
+            </h2>
+            <p className="text-on-surface-variant text-xs md:text-sm">
+              {language === 'pt-BR' || language === 'pt-PT' 
+                ? 'Ative ou desative o player e as guias de áudio/vídeo do YouTube' 
+                : 'Enable or disable YouTube audio / video guide play'}
+            </p>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(settings.streamingAccounts || []).map((account) => (
-            <div 
-              key={account.id}
-              className="p-6 rounded-3xl bg-surface-container-low border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl",
-                  account.name === 'Spotify' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                )}>
-                  <Icon name={
-                    account.name === 'Spotify' ? 'music_note' : 'smart_display'
-                  } />
-                </div>
-                <div>
-                  <h4 className="font-headline font-bold text-on-surface">{account.name}</h4>
-                  <p className={cn(
-                    "font-label text-[10px] uppercase tracking-widest",
-                    account.connected ? "text-green-500" : "text-on-surface-variant/40"
-                  )}>
-                    {account.connected ? t.connected : t.not_connected}
-                  </p>
-                </div>
+        <div className="max-w-xl">
+          <div className="p-6 rounded-3xl bg-surface-container-low border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container transition-all">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-red-500/10 text-red-500">
+                <Icon name="smart_display" />
               </div>
-              <button 
-                onClick={() => {
-                  if (account.connected) {
-                    handleDisconnect(account.id);
-                  } else {
-                    handleConnect(account.id);
-                  }
-                }}
-                className={cn(
-                  "px-4 py-2 rounded-xl font-label text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95",
-                  account.connected 
-                    ? "bg-surface-container-highest text-on-surface-variant hover:text-error" 
-                    : "bg-primary text-on-primary shadow-lg shadow-primary/20"
-                )}
-              >
-                {account.connected ? t.disconnect : t.connect}
-              </button>
+              <div>
+                <h4 className="font-headline font-bold text-on-surface">YouTube Player</h4>
+                <p className={cn(
+                  "font-label text-[10px] uppercase tracking-widest",
+                  youtubeAccount.connected ? "text-green-500" : "text-on-surface-variant/40"
+                )}>
+                  {youtubeAccount.connected 
+                    ? (language === 'pt-BR' || language === 'pt-PT' ? 'Ativado' : 'Activated') 
+                    : (language === 'pt-BR' || language === 'pt-PT' ? 'Desativado' : 'Deactivated')}
+                </p>
+              </div>
             </div>
-          ))}
+            <button 
+              onClick={() => {
+                if (youtubeAccount.connected) {
+                  handleDisconnect('youtube');
+                } else {
+                  handleConnect('youtube');
+                }
+              }}
+              className={cn(
+                "px-5 py-2.5 rounded-xl font-label text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95",
+                youtubeAccount.connected 
+                  ? "bg-surface-container-highest text-on-surface-variant hover:text-error hover:bg-error/10" 
+                  : "bg-red-650 hover:bg-red-700 text-white shadow-lg shadow-red-650/20"
+              )}
+            >
+              {youtubeAccount.connected 
+                ? (language === 'pt-BR' || language === 'pt-PT' ? 'Desativar' : 'Deactivate') 
+                : (language === 'pt-BR' || language === 'pt-PT' ? 'Ativar' : 'Activate')}
+            </button>
+          </div>
         </div>
       </motion.div>
     );
@@ -4362,7 +4227,6 @@ const DEFAULT_SETTINGS: PerformanceSettings = {
   theme: 'dark',
   language: 'en-US',
   streamingAccounts: [
-    { id: 'spotify', name: 'Spotify', connected: false },
     { id: 'youtube', name: 'YouTube', connected: false },
   ]
 };
@@ -4385,8 +4249,8 @@ export default function App() {
     const loaded = storage.loadSettings();
     if (loaded && loaded.streamingAccounts) {
       const filtered = loaded.streamingAccounts
-        .filter(a => a.id === 'spotify' || a.id === 'youtube')
-        .map(a => a.id === 'youtube' ? { ...a, name: 'YouTube' as const } : a);
+        .filter(a => a.id === 'youtube')
+        .map(a => ({ ...a, name: 'YouTube' as const }));
       return { ...loaded, streamingAccounts: filtered };
     }
     return loaded || DEFAULT_SETTINGS;
@@ -4431,25 +4295,7 @@ export default function App() {
     }
   }, [performanceSettings.theme]);
 
-  useEffect(() => {
-    const checkSpotifyStatus = async () => {
-      try {
-        const response = await fetch('/api/auth/spotify/status');
-        const { connected } = await response.json();
-        if (connected) {
-          setPerformanceSettings(prev => ({
-            ...prev,
-            streamingAccounts: prev.streamingAccounts?.map(a => 
-              a.id === 'spotify' ? { ...a, connected: true } : a
-            )
-          }));
-        }
-      } catch (error) {
-        console.error('Failed to check Spotify status:', error);
-      }
-    };
-    checkSpotifyStatus();
-  }, []);
+
 
   const addSong = (song: Omit<Song, 'id'>) => {
     const newSong = { ...song, id: Math.random().toString(36).substr(2, 9) };
@@ -4584,7 +4430,7 @@ function AppContent({
           <Route path="/edit-song" element={<SongEditorView onSave={(s) => {
             if ('id' in s) updateSong(s as Song);
             else addSong(s);
-          }} initialSong={editingSong} onCancel={() => setEditingSong(null)} language={performanceSettings.language} isSpotifyConnected={!!performanceSettings.streamingAccounts?.find(a => a.id === 'spotify')?.connected} />} />
+          }} initialSong={editingSong} onCancel={() => setEditingSong(null)} language={performanceSettings.language} />} />
         </Routes>
       </AnimatePresence>
       {(!isPerformView && !isEditView) && <BottomNav language={performanceSettings.language} />}

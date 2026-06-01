@@ -4,7 +4,7 @@
 
 Lyra Chords é um ecossistema completo, elegante e de alto desempenho projetado sob medida para músicos, maestros e instrumentistas. Ele permite a organização inteligente de repertórios, visualização avançada de partituras em PDF, transposição dinâmica de tonalidades em tempo real, metrônomo interativo e integração avançada com guias de áudio pelo YouTube.
 
-![Lyra Chords Preview](Screenshot_lyra_chords.png)
+![Lyra Chords Preview](screenshot.png)
 
 ---
 
@@ -49,7 +49,7 @@ Lyra Chords is a robust, lightweight, and modern performance console tailored fo
 - **Frontend**: React 18, Vite, TypeScript
 - **Styling**: Tailwind CSS, Framer Motion (for high-fidelity fluid transitions)
 - **Engine de IA**: Google Gemini Developer SDK (`@google/genai`)
-- **Backend / Proxy**: Node.js, Express (para OAuth do Spotify e proxies seguros de API)
+- **Backend / Proxy**: Node.js, Express (para proxies seguros de API e servidor de desenvolvimento)
 - **Database**: IndexedDB / LocalStorage para persistência robusta local
 
 ---
@@ -71,7 +71,7 @@ Certifique-se de ter o **Node.js** instalado em sua máquina.
    ```bash
    cp .env.example .env
    ```
-   *Nota: Opcionalmente insira as credenciais do Gemini API e Spotify API para habilitar as importações via IA e o tocador integrado do Spotify.*
+   *Nota: Opcionalmente insira as credenciais da API do Gemini (`GEMINI_API_KEY`) no arquivo `.env` para habilitar a digitalização e segmentação de cifras via IA.*
 
 ### Executando em Desenvolvimento
 
