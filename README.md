@@ -4,7 +4,7 @@
 
 Lyra Chords é um ecossistema completo, elegante e de alto desempenho projetado sob medida para músicos, maestros e instrumentistas. Ele permite a organização inteligente de repertórios, visualização avançada de partituras em PDF, transposição dinâmica de tonalidades em tempo real, metrônomo interativo e integração avançada com guias de áudio pelo YouTube.
 
-![Lyra Chords Preview](screenshot.png)
+![Lyra Chords Preview](Screenshot_lyra_chords.png)
 
 ---
 
